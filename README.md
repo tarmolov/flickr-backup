@@ -78,3 +78,10 @@ $ npm start # upload photos to s3
 $ BACKUP_STRATEGY=file npm start # download photos locally
 $ DEBUG=true npm start # show debug information
 ```
+
+### Howto
+#### Download a single album from s3
+```
+$ mkdir flickr-album
+$ REGION=ru-central1 AWS_ACCESS_KEY_ID=<accessKeyId> AWS_SECRET_ACCESS_KEY=<secretAccessKey>  aws s3 sync --endpoint-url https://storage.yandexcloud.net "s3://<bucket>/<album>" flickr-album
+```
