@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const DEBUG = process.env.DEBUG;
 const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 'yandex-s3';
+const FILTER_PHOTOSETS = process.env.FILTER_PHOTOSETS;
 
 const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'secrets.json')).toString());
 
@@ -181,6 +182,9 @@ async function uploadPhoto(strategy, sourceUrl, objectKey) {
 
     for (const photoset of photosets) {
         const photosetTitle = photoset.title._content;
+        if (FILTER_PHOTOSETS && !FILTER_PHOTOSETS.includes(photosetTitle)) {
+            continue;
+        }
         console.log(chalk.magenta(photosetTitle));
 
         const photos = await flickrProvider.getAllPhotosetPhotos(photoset.id, userId);

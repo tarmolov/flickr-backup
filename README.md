@@ -1,5 +1,5 @@
 ## Flickr backup
-A simple script for backuping photos from Flickr account.
+A simple script for backuping photos from [Flickr](https://flickr.com/) account.
 
 ### Available backup destinations
 * `yandex-s3` - Yandex Cloud S3
@@ -80,8 +80,13 @@ $ DEBUG=true npm start # show debug information
 ```
 
 ### Howto
-#### Download a single album from s3
+#### Backup a single photoset from Flickr
 ```
-$ mkdir flickr-album
-$ REGION=ru-central1 AWS_ACCESS_KEY_ID=<accessKeyId> AWS_SECRET_ACCESS_KEY=<secretAccessKey>  aws s3 sync --endpoint-url https://storage.yandexcloud.net "s3://<bucket>/<album>" flickr-album
+$ FILTER_PHOTOSETS="<photoset title>" BACKUP_STRATEGY=file npm start
+```
+
+#### Download a single photoset from s3
+```
+$ mkdir flickr-photoset
+$ REGION=ru-central1 AWS_ACCESS_KEY_ID=<accessKeyId> AWS_SECRET_ACCESS_KEY=<secretAccessKey>  aws s3 sync --endpoint-url https://storage.yandexcloud.net "s3://<bucket>/<photoset title>" flickr-photoset
 ```
