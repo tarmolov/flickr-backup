@@ -56,6 +56,12 @@ class FlickrProvider {
         return photos;
     }
 
+    // https://www.flickr.com/services/api/flickr.photos.getInfo.html
+    async getPhotoInfo(photoId) {
+        const response = await this._request('flickr.photos.getInfo', {photo_id: photoId});
+        return response.photo;
+    }
+
     // https://www.flickr.com/services/api/flickr.photos.getSizes.html
     async getPhotoSizes(photoId) {
         const response = await this._request('flickr.photos.getSizes', {photo_id: photoId});
@@ -65,7 +71,8 @@ class FlickrProvider {
     // https://www.flickr.com/services/api/flickr.photos.getSizes.html
     async getPhotoOriginalSourceUrl(photoId) {
         const sizes = await this.getPhotoSizes(photoId);
-        return sizes.find((size) => size.label === 'Original').source;
+        return sizes.find((size) => size.label === 'Video Original').source ||
+            sizes.find((size) => size.lab === 'video' || size.label === 'Original').source;
     }
 
     async _request(method, params) {
@@ -152,15 +159,15 @@ const backupStrategies = {
 
 async function uploadPhoto(strategy, sourceUrl, objectKey) {
     const backupProvider = backupStrategies[strategy];
-    logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.white(sourceUrl));
+    logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.white(`${sourceUrl} → ${objectKey}`));
     const isExist = await backupProvider.isObjectExist(objectKey);
     if (isExist) {
-        logUpdate(chalk.grey.bgGreenBright(' SKIP '), chalk.white(sourceUrl));
+        logUpdate(chalk.grey.bgGreenBright(' SKIP '), chalk.white(`${sourceUrl} → ${objectKey}`));
     } else {
         let fimg = await fetch(sourceUrl);
         const body = Buffer.from(await fimg.arrayBuffer());
         await backupProvider.upload(objectKey, body);
-        logUpdate(chalk.grey.bgGreen(' DONE '), chalk.white(sourceUrl));
+        logUpdate(chalk.grey.bgGreen(' DONE '), chalk.white(`${sourceUrl} → ${objectKey}`));
     }
     logUpdate.done();
 }
@@ -179,7 +186,9 @@ async function uploadPhoto(strategy, sourceUrl, objectKey) {
         const photos = await flickrProvider.getAllPhotosetPhotos(photoset.id, userId);
         for (const photo of photos) {
             const sourceUrl = await flickrProvider.getPhotoOriginalSourceUrl(photo.id);
-            const objectKey = `${photosetTitle}/${path.basename(sourceUrl)}`;
+            const photoInfo = await flickrProvider.getPhotoInfo(photo.id);
+            const fileName = photoInfo.title._content || photoInfo.id;
+            const objectKey = `${photosetTitle}/${photoInfo.title._content}.${photoInfo.originalformat}`;
             await uploadPhoto(BACKUP_STRATEGY, sourceUrl, objectKey);
         }
     }
