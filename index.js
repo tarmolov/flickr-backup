@@ -172,7 +172,7 @@ async function uploadPhoto(strategy, sourceUrl, objectKey) {
     console.log(chalk.cyan(`Use ${BACKUP_STRATEGY} backup strategy`));
     const photosets = await flickrProvider.getAllPhotosets(userId);
 
-    for (const photoset of photosets.slice(0, 2)) {
+    for (const photoset of photosets) {
         const photosetTitle = photoset.title._content;
         console.log(chalk.magenta(photosetTitle));
 
