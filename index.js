@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const DEBUG = process.env.DEBUG;
 const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 'yandex-s3';
 
-const config = JSON.parse(fs.readFileSync('secrets.json').toString());
+const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'secrets.json')).toString());
 
 class FlickrProvider {
     cacheFolder = path.join(__dirname, '.flickr-cache');
