@@ -71,8 +71,8 @@ class FlickrProvider {
     // https://www.flickr.com/services/api/flickr.photos.getSizes.html
     async getPhotoOriginalSourceUrl(photoId) {
         const sizes = await this.getPhotoSizes(photoId);
-        return sizes.find((size) => size.label === 'Video Original').source ||
-            sizes.find((size) => size.lab === 'video' || size.label === 'Original').source;
+        return (sizes.find((size) => size.label === 'Video Original') ||
+            sizes.find((size) => size.lab === 'video' || size.label === 'Original')).source;
     }
 
     async _request(method, params) {
