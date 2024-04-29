@@ -1,0 +1,5 @@
+.flickr-cache
+.DS_Store
+backup
+node_modules
+secrets.json
