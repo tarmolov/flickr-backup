@@ -134,12 +134,12 @@ class S3Provider {
         do {
             const command = new s3.ListObjectsV2Command({
                 Bucket: this._config.bucket,
-                Prefix: prefix,
+                Prefix: prefix + '/',
                 ContinuationToken: continuationToken
             });
             const data = await this._client.send(command);
 
-            allObjects = allObjects.concat(data.Contents);
+            allObjects = allObjects.concat(data.Contents || []);
             continuationToken = data.NextContinuationToken;
         } while (continuationToken);
 
@@ -200,6 +200,7 @@ async function uploadPhoto(sourceUrl, objectKey) {
     const isExist = await backupProvider.isObjectExist(objectKey);
     if (isExist) {
         logUpdate(chalk.grey.bgGreenBright(' SKIP '), chalk.white(`${sourceUrl} → ${objectKey}`));
+        logUpdate.done();
     } else {
         let fimg = await fetch(sourceUrl);
         const body = Buffer.from(await fimg.arrayBuffer());
@@ -211,7 +212,7 @@ async function uploadPhoto(sourceUrl, objectKey) {
 
 function showNameDuplicates(loginInfo, photos) {
     const photosNames = photos.map((photo) => photo.title).sort();
-    const duplicates = photosNames.filter((item, index) => photosNames.indexOf(item) !== index);
+    const duplicates = photosNames.filter((item, index) => photosNames.indexOf(item) !== index).filter(Boolean);
     if (duplicates.length) {
         console.log(chalk.red('Duplicates are found:'));
         duplicates.forEach((duplicateTitle) => {
