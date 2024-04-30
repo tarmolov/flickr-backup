@@ -120,6 +120,15 @@ class S3Provider {
         }
     }
 
+    async listObjects(prefix) {
+        const command = new s3.ListObjectsV2Command({
+            Bucket: this._config.bucket,
+            Prefix: prefix
+        });
+        const res = await this._client.send(command);
+        return res.Contents;
+    }
+
     async upload(key, body) {
         const command = new s3.PutObjectCommand({
             Bucket: this._config.bucket,
@@ -145,6 +154,11 @@ class FileProvider {
         }
     }
 
+    async listObjects(prefix) {
+        const dirPath = path.resolve(this._backupDirectory, prefix);
+        return await fs.promises.readdir(dirPath);
+    }
+
     async upload(key, body) {
         const filePath = path.resolve(this._backupDirectory, key);
         await fs.promises.mkdir(path.parse(filePath).dir, {recursive: true});
@@ -157,9 +171,9 @@ const backupStrategies = {
     'yandex-s3': new S3Provider(config.s3),
     'file': new FileProvider('./backup')
 };
+const backupProvider = backupStrategies[BACKUP_STRATEGY];
 
-async function uploadPhoto(strategy, sourceUrl, objectKey) {
-    const backupProvider = backupStrategies[strategy];
+async function uploadPhoto(sourceUrl, objectKey) {
     logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.white(`${sourceUrl} → ${objectKey}`));
     const isExist = await backupProvider.isObjectExist(objectKey);
     if (isExist) {
@@ -185,15 +199,25 @@ async function uploadPhoto(strategy, sourceUrl, objectKey) {
         if (FILTER_PHOTOSETS && !FILTER_PHOTOSETS.includes(photosetTitle)) {
             continue;
         }
-        console.log(chalk.magenta(photosetTitle));
+        logUpdate.done();
+        logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.magenta(photosetTitle));
 
         const photos = await flickrProvider.getAllPhotosetPhotos(photoset.id, userId);
+        const remotePhotos = await backupProvider.listObjects(photosetTitle);
+
+        // it's better to compare all objects keys to make sure that photos lists are equal
+        // but for my case even such simple conditional works fine
+        if (remotePhotos.length === photos.length) {
+            logUpdate(chalk.grey.bgGreenBright(' SKIP '), chalk.magenta(photosetTitle));
+            continue;
+        }
+
         for (const photo of photos) {
             const sourceUrl = await flickrProvider.getPhotoOriginalSourceUrl(photo.id);
             const photoInfo = await flickrProvider.getPhotoInfo(photo.id);
             const fileName = photoInfo.title._content || photoInfo.id;
             const objectKey = `${photosetTitle}/${photoInfo.title._content}.${photoInfo.originalformat}`;
-            await uploadPhoto(BACKUP_STRATEGY, sourceUrl, objectKey);
+            await uploadPhoto(sourceUrl, objectKey);
         }
     }
 })();
