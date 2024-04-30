@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const DEBUG = process.env.DEBUG;
 const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 'yandex-s3';
+const BACKUP_DIRECTORY = './backup';
 const FILTER_PHOTOSETS = process.env.FILTER_PHOTOSETS;
 
 const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'secrets.json')).toString());
@@ -126,7 +127,12 @@ class S3Provider {
             Prefix: prefix
         });
         const res = await this._client.send(command);
-        return res.Contents;
+
+        if (res.IsTruncated) {
+            console.log(chalk.yellow(`Photoset "${prefix}" contains too many photos. Returned result has been truncated.`));
+        }
+
+        return res.Contents || [];
     }
 
     async upload(key, body) {
@@ -156,7 +162,12 @@ class FileProvider {
 
     async listObjects(prefix) {
         const dirPath = path.resolve(this._backupDirectory, prefix);
-        return await fs.promises.readdir(dirPath);
+        try {
+            await fs.promises.access(dirPath);
+            return await fs.promises.readdir(dirPath);
+        } catch (err) {
+            return [];
+        }
     }
 
     async upload(key, body) {
@@ -169,7 +180,7 @@ class FileProvider {
 const flickrProvider = new FlickrProvider(config.flickr);
 const backupStrategies = {
     'yandex-s3': new S3Provider(config.s3),
-    'file': new FileProvider('./backup')
+    'file': new FileProvider(BACKUP_DIRECTORY)
 };
 const backupProvider = backupStrategies[BACKUP_STRATEGY];
 
@@ -191,7 +202,15 @@ async function uploadPhoto(sourceUrl, objectKey) {
     const loginInfo = await flickrProvider.testLogin();
     const userId = process.env.USER_ID || loginInfo.user.id;
 
-    console.log(chalk.cyan(`Use ${BACKUP_STRATEGY} backup strategy`));
+    console.log([
+        chalk.cyan(`Backup strategy:\t${BACKUP_STRATEGY}`),
+        BACKUP_STRATEGY === 'yandex-s3' && chalk.cyan(`S3 bucket:\t\t${config.s3.bucket}`),
+        BACKUP_STRATEGY === 'file' && chalk.cyan(`Backup directory:\t${BACKUP_DIRECTORY}`),
+        chalk.cyan(`Filter photosets:\t${FILTER_PHOTOSETS || 'none'}`),
+        chalk.cyan(`Debug mode:\t\t${Boolean(DEBUG)}`),
+        '\n'
+    ].filter(Boolean).join('\n'));
+
     const photosets = await flickrProvider.getAllPhotosets(userId);
 
     for (const photoset of photosets) {
@@ -199,7 +218,6 @@ async function uploadPhoto(sourceUrl, objectKey) {
         if (FILTER_PHOTOSETS && !FILTER_PHOTOSETS.includes(photosetTitle)) {
             continue;
         }
-        logUpdate.done();
         logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.magenta(photosetTitle));
 
         const photos = await flickrProvider.getAllPhotosetPhotos(photoset.id, userId);
@@ -209,8 +227,10 @@ async function uploadPhoto(sourceUrl, objectKey) {
         // but for my case even such simple conditional works fine
         if (remotePhotos.length === photos.length) {
             logUpdate(chalk.grey.bgGreenBright(' SKIP '), chalk.magenta(photosetTitle));
+            logUpdate.done();
             continue;
         }
+        logUpdate.done();
 
         for (const photo of photos) {
             const sourceUrl = await flickrProvider.getPhotoOriginalSourceUrl(photo.id);
