@@ -2,4 +2,4 @@
 .DS_Store
 backup
 node_modules
-secrets.json
+secrets*.json

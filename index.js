@@ -17,7 +17,8 @@ const BACKUP_DIRECTORY = './backup';
 const FILTER_PHOTOSETS = process.env.FILTER_PHOTOSETS;
 const USE_CACHE = process.env.USE_CACHE;
 
-const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'secrets.json')).toString());
+const configPath = process.env.SECRETS_PATH || path.resolve(__dirname, 'secrets.json');
+const config = JSON.parse(fs.readFileSync(configPath).toString());
 
 class FlickrProvider {
     cacheFolder = path.join(__dirname, '.flickr-cache');
