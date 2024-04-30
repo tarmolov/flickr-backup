@@ -15,6 +15,7 @@ const DEBUG = process.env.DEBUG;
 const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 'yandex-s3';
 const BACKUP_DIRECTORY = './backup';
 const FILTER_PHOTOSETS = process.env.FILTER_PHOTOSETS;
+const USE_CACHE = process.env.USE_CACHE;
 
 const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'secrets.json')).toString());
 
@@ -78,6 +79,10 @@ class FlickrProvider {
     }
 
     async _request(method, params) {
+        if (!USE_CACHE) {
+            return await this._client(method, params);
+        }
+
         const cacheKey = crypto.createHash('md5').update(`${method}-${JSON.stringify(params)}`).digest('hex');
         const cacheFilePath = path.join(this.cacheFolder, `${cacheKey}.json`);
 

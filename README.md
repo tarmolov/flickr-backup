@@ -80,7 +80,8 @@ $ cd flickr-backup
 $ npm install
 $ npm start # upload photos to s3
 $ BACKUP_STRATEGY=file npm start # download photos locally
-$ DEBUG=true npm start # show debug information
+$ DEBUG=1 npm start # show debug information
+$ USE_CACHE=1 npm start # use cache for flickr responses
 ```
 
 ### Howto
