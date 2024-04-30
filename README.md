@@ -5,7 +5,9 @@ A simple script for backuping photos from [Flickr](https://flickr.com/) account.
 * `yandex-s3` - Yandex Cloud S3
 * `file` - Local file system
 
-**Note**.The script does not upload already uploaded photos. So, the script checks uploaded photos and starts uploading only new ones.
+### Features
+* Does not upload already uploaded photos. So, the script checks uploaded photos and starts uploading only new ones.
+* Show dubbed photos in a photoset.
 
 ### Prerequisites
 Create `secrets.json`:

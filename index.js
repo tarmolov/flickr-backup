@@ -122,17 +122,22 @@ class S3Provider {
     }
 
     async listObjects(prefix) {
-        const command = new s3.ListObjectsV2Command({
-            Bucket: this._config.bucket,
-            Prefix: prefix
-        });
-        const res = await this._client.send(command);
+        let allObjects = [];
+        let continuationToken = null;
 
-        if (res.IsTruncated) {
-            console.log(chalk.yellow(`Photoset "${prefix}" contains too many photos. Returned result has been truncated.`));
-        }
+        do {
+            const command = new s3.ListObjectsV2Command({
+                Bucket: this._config.bucket,
+                Prefix: prefix,
+                ContinuationToken: continuationToken
+            });
+            const data = await this._client.send(command);
 
-        return res.Contents || [];
+            allObjects = allObjects.concat(data.Contents);
+            continuationToken = data.NextContinuationToken;
+        } while (continuationToken);
+
+        return allObjects;
     }
 
     async upload(key, body) {
@@ -198,6 +203,22 @@ async function uploadPhoto(sourceUrl, objectKey) {
     logUpdate.done();
 }
 
+function showNameDuplicates(loginInfo, photos) {
+    const photosNames = photos.map((photo) => photo.title).sort();
+    const duplicates = photosNames.filter((item, index) => photosNames.indexOf(item) !== index);
+    if (duplicates.length) {
+        console.log(chalk.red('Duplicates are found:'));
+        duplicates.forEach((duplicateTitle) => {
+            console.log(chalk.red(duplicateTitle));
+            for (const photo of photos) {
+                if (photo.title === duplicateTitle) {
+                    console.log(chalk.red(`\thttps://flickr.com/photos/${loginInfo.user.path_alias}/${photo.id}`));
+                }
+            }
+        });
+    }
+}
+
 (async () => {
     const loginInfo = await flickrProvider.testLogin();
     const userId = process.env.USER_ID || loginInfo.user.id;
@@ -218,6 +239,7 @@ async function uploadPhoto(sourceUrl, objectKey) {
         if (FILTER_PHOTOSETS && !FILTER_PHOTOSETS.includes(photosetTitle)) {
             continue;
         }
+
         logUpdate(chalk.grey.bgYellow(' LOAD '), chalk.magenta(photosetTitle));
 
         const photos = await flickrProvider.getAllPhotosetPhotos(photoset.id, userId);
@@ -232,11 +254,19 @@ async function uploadPhoto(sourceUrl, objectKey) {
         }
         logUpdate.done();
 
+        console.log(`Flickr photoset photos: ${photos.length}`);
+        console.log(`Backup photoset photos: ${remotePhotos.length}`);
+        showNameDuplicates(loginInfo, photos);
+
         for (const photo of photos) {
             const sourceUrl = await flickrProvider.getPhotoOriginalSourceUrl(photo.id);
             const photoInfo = await flickrProvider.getPhotoInfo(photo.id);
+
+            // flick returns wrong extension for some videos
+            const fileExtension = photoInfo.media === 'video' && photoInfo.originalformat === 'jpg' ? 'mov':
+                photoInfo.originalformat;
             const fileName = photoInfo.title._content || photoInfo.id;
-            const objectKey = `${photosetTitle}/${photoInfo.title._content}.${photoInfo.originalformat}`;
+            const objectKey = `${photosetTitle}/${fileName}.${fileExtension}`;
             await uploadPhoto(sourceUrl, objectKey);
         }
     }
