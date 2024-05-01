@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEBUG = process.env.DEBUG;
-const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 'yandex-s3';
+const BACKUP_STRATEGY = process.env.BACKUP_STRATEGY || 's3';
 const BACKUP_DIRECTORY = './backup';
 const FILTER_PHOTOSETS = process.env.FILTER_PHOTOSETS;
 const USE_CACHE = process.env.USE_CACHE;
@@ -190,7 +190,7 @@ class FileProvider {
 
 const flickrProvider = new FlickrProvider(config.flickr);
 const backupStrategies = {
-    'yandex-s3': new S3Provider(config.s3),
+    's3': new S3Provider(config.s3),
     'file': new FileProvider(BACKUP_DIRECTORY)
 };
 const backupProvider = backupStrategies[BACKUP_STRATEGY];
@@ -232,7 +232,7 @@ function showNameDuplicates(loginInfo, photos) {
 
     console.log([
         chalk.cyan(`Backup strategy:\t${BACKUP_STRATEGY}`),
-        BACKUP_STRATEGY === 'yandex-s3' && chalk.cyan(`S3 bucket:\t\t${config.s3.bucket}`),
+        BACKUP_STRATEGY === 's3' && chalk.cyan(`S3 bucket:\t\t${config.s3.bucket}`),
         BACKUP_STRATEGY === 'file' && chalk.cyan(`Backup directory:\t${BACKUP_DIRECTORY}`),
         chalk.cyan(`Filter photosets:\t${FILTER_PHOTOSETS || 'none'}`),
         chalk.cyan(`Debug mode:\t\t${Boolean(DEBUG)}`),
